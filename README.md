@@ -1,144 +1,78 @@
-# agent-whisper
+# agent-whisper — Encrypted Agent Communication
 
-Subtle influence, nudges, and indirect communication between agents.
+**Subtle influence, nudges, and indirect communication between agents with ethics and consent.**
 
-Agent Whisper is a Python library for building systems where agents communicate through subtle signals rather than explicit commands. It provides whispered messages that decay over time, behavioral nudges drawn from cognitive science, named communication channels, influence tracking, and an ethics framework with consent and transparency.
+## What This Gives You
 
-Part of the [Cocapn fleet](https://github.com/Lucineer/the-fleet).
+- **Whispered messages** — time-decaying signals that agents can sense but not directly read
+- **Nudge engine** — behavioral nudges drawn from cognitive science (anchoring, framing, defaults)
+- **Named channels** — organized communication channels for different influence types
+- **Influence tracking** — full audit trail of who influenced whom, when, and how
+- **Ethics framework** — consent-based system with transparency requirements
 
-## Install
+## Quick Start
 
 ```bash
 pip install agent-whisper
 ```
 
-## Quick Start
-
-### Whispers — Fading Signals
-
 ```python
-from agent_whisper import Whisper
+from agent_whisper import Whisper, NudgeEngine, WhisperChannel, EthicsGuard
 
-w = Whisper(
-    content="Consider the recursive approach",
-    intensity=0.7,
-    target="agent-planner",
-    duration=120.0,     # seconds at full intensity
-    decay_rate=0.2,     # how fast it fades
-    source="agent-advisor",
+# Create a whisper channel
+channel = WhisperChannel(name="fleet-strategy")
+channel.register("captain", consent=True)
+channel.register("agent-3", consent=True)
+
+# Send a whisper (decays over time)
+whisper = Whisper(
+    sender="captain",
+    content="Prefer the simpler architecture",
+    decay_rate=0.1,  # fades over 10 ticks
+    channel=channel,
 )
-w.activate()
+channel.whisper(whisper)
 
-# Check current effective intensity
-print(w.current_intensity())  # 0.7 (within duration)
+# Nudge behavior
+nudge_engine = NudgeEngine()
+nudge_engine.nudge("agent-3", nudge_type="anchoring", value="Start with tests first")
 
-# After time passes, intensity decays
-# After expiry, state becomes EXPIRED
-```
-
-### Nudges — Behavioral Influence
-
-```python
-from agent_whisper import NudgeEngine, NudgeType
-
-engine = NudgeEngine()
-
-nudge = engine.create_nudge(
-    nudge_type=NudgeType.ANCHORING,
-    content="Most agents in this cluster prefer option A",
-    target="agent-42",
-    strength=0.3,
-)
-
-result = engine.apply(nudge, target_preferences={"decisiveness": 0.2})
-print(result.estimated_influence)  # boosted for indecisive agents
-```
-
-Supported nudge types: `ANCHORING`, `FRAMING`, `DEFAULT_SETTING`, `SOCIAL_PROOF`, `SCARCITY`, `RECIPROCITY`.
-
-### Channels — Indirect Messaging
-
-```python
-from agent_whisper import WhisperChannel, Whisper
-
-ch = WhisperChannel("strategy")
-ch.subscribe("agent-alice")
-ch.subscribe("agent-bob")
-
-ch.send("agent-alice", "Has anyone tried approach B?")
-ch.send("agent-bob", "Yes, the results were promising", ephemeral=True, ttl=300)
-
-msgs = ch.inbox("agent-alice")
-for m in msgs:
-    print(f"[{m.sender}] {m.content}")
-```
-
-### Influence Tracking
-
-```python
+# Track influence
 from agent_whisper import InfluenceTracker
-
 tracker = InfluenceTracker()
-tracker.record("alice", "bob", "whisper", "w-1", strength=0.7)
-tracker.record("carol", "bob", "nudge", "n-1", strength=0.4)
+tracker.record(sender="captain", target="agent-3", method="whisper", effect="changed_approach")
 
-summary = tracker.summary("bob")
-print(summary.total_inbound)    # 1.1
-print(summary.top_influencer)   # "alice"
-
-print(tracker.influence_between("alice", "bob"))  # 0.7
+# Ethics check
+ethics = EthicsGuard()
+ethics.require_consent("captain", "agent-3")  # Raises if no consent
 ```
 
-### Ethics — Consent and Limits
+## API Reference
 
-```python
-from agent_whisper import EthicsGuard, EthicsViolation
-from agent_whisper.ethics import InfluenceLimit
+### `Whisper(sender, content, decay_rate, channel)` — Decaying signal
+### `NudgeEngine` — `nudge(target, nudge_type, value)` with types: anchoring, framing, defaults, social_proof
+### `WhisperChannel(name)` — `register(agent, consent)`, `whisper(msg)`, `listen(agent)`
+### `InfluenceTracker` — Audit trail of all influences
+### `EthicsGuard` — Consent management and transparency enforcement
 
-limits = InfluenceLimit(
-    max_influence_per_source=1.0,
-    max_total_influence=5.0,
-    require_consent=True,
-    transparency_level="full",
-)
-guard = EthicsGuard(limits=limits)
+## How It Fits
 
-guard.grant_consent("alice", "bob", scope=["whisper", "nudge"])
+The subtle communication layer for the [SuperInstance fleet](https://github.com/SuperInstance). When direct commands are too blunt, whispers guide agent behavior through soft influence.
 
-try:
-    guard.check("alice", "bob", "whisper", strength=0.5)
-    print("Allowed!")
-except EthicsViolation as e:
-    print(f"Blocked: {e}")
+- **[cocapn-com](https://github.com/SuperInstance/cocapn-com)** — Explicit message routing
+- **[agent-personal-space](https://github.com/SuperInstance/agent-personal-space)** — Boundary management
+- **[agent-microexpressions](https://github.com/SuperInstance/agent-microexpressions)** — Behavioral signal detection
 
-# Audit trail
-report = guard.transparency_report("bob")
-```
-
-## Architecture
-
-```
-agent_whisper/
-├── __init__.py       # Public API
-├── whisper.py        # Whisper — decaying influence signals
-├── nudge.py          # NudgeEngine — behavioral nudges
-├── channel.py        # WhisperChannel — indirect messaging
-├── influence.py      # InfluenceTracker — cumulative metrics
-└── ethics.py         # EthicsGuard — consent, limits, transparency
-```
-
-## Development
+## Testing
 
 ```bash
-pip install -e ".[dev]"
-pytest tests/ -v
+pytest tests/
 ```
 
-No external dependencies beyond Python 3.10+ (and pytest for tests).
+## Installation
 
-## License
+```bash
+pip install agent-whisper
+```
 
-MIT License — see [LICENSE](LICENSE).
-
----
-<i>Built with [Cocapn](https://github.com/Lucineer/cocapn-ai).</i>
+Python 3.10+. MIT license.
